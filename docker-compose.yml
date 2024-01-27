@@ -1,0 +1,20 @@
+version: '3'
+services:
+  app:
+    container_name: ictshort_app
+    build: ./go
+    volumes:
+      - ./go/app:/app:z
+    ports:
+      - 8080:80
+    networks:
+      - ictshort_network
+  voicevox_engine:
+    container_name: ictshort_voicevox_engine
+    image: voicevox/voicevox_engine
+    networks:
+      - ictshort_network
+networks:
+    ictshort_network:
+        external: true
+    
