@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>情報技術ショート</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <header>
@@ -11,17 +12,53 @@
     </header>
     <main>
         <div id="ListenList">
-            <button onclick="">トレンド</button>
+            <button onclick="playCategory()">トレンド</button>
         </div>
         <div id="Player" style="display: none;">
-            
+            <audio id="AudioPlayer" src=""></audio>
         </div>
         
     </main>
 
     <script>
-        function playCategory(keyword) {
+        async function playCategory(keyword) {
             document.getElementById("Player").style.display="";
+            let url  = new URL("/api/voice")
+            url.searchParams.set("site","Qiita")
+            url.searchParams.set("index","0")
+            url.searchParams.set("category","trend")
+            let blob = await fetchData(url.href,"GET")
+            
+            document.getElementById("AudioPlayer").src = URL.createObjectURL(blob);
+
+        }
+        function fetchApi(apiPath,method,formData,onDoneFunc) {
+            fetch(apiPath,{
+                method: method,
+                body: formData
+            }).then((res)=>res.body.getReader())
+            .then((reader)=>{
+                let decoder = new TextDecoder();
+                let searchJsonText ='';
+                function readChunk({done,value}){
+                    if(done){
+                        let jsonObj = JSON.parse(searchJsonText);
+                        onDoneFunc(jsonObj);
+                        return;
+                    }
+                    searchJsonText+=decoder.decode(value);
+                    reader.read().then(readChunk);
+                }
+                reader.read().then(readChunk);
+            });
+        }
+        async function fetchData(apiPath,method,formData) {
+            let buffer = fetch(apiPath,{
+                method: method,
+                body: formData
+            }).then((res)=>res.arrayBuffer())
+
+            return new Blob([buffer])
         }
     </script>
 </body>

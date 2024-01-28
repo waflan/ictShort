@@ -12,6 +12,8 @@ services:
   voicevox_engine:
     container_name: ictshort_voicevox_engine
     image: voicevox/voicevox_engine
+    environment:
+      - ALLOW_ORIGIN=ictshort_voicevox_engine
     networks:
       - ictshort_network
 networks:

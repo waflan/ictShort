@@ -1,11 +1,11 @@
 package apifuncs
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"x19053/ictshort/articles"
 	"x19053/ictshort/config"
+	"x19053/ictshort/voice"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,13 +13,7 @@ import (
 var clientQiita articles.ApiClientQiita
 
 func init() {
-	MainConfig, err := config.LoadConfigMain("/config/config.yml")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	clientQiita.Key = MainConfig.AppKeyQiita
-
+	clientQiita.Key = config.MainConfig.AppKeyQiita
 }
 
 func GetTrendArticleApi(c *gin.Context) {
@@ -55,4 +49,23 @@ func GetArticlesApi(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, articles)
+}
+
+func GetVoiceApi(c *gin.Context) {
+	site := c.Query("site")
+	keyword := c.Query("keyword")
+	id := c.Query("id")
+
+	resposeData := []byte{}
+
+	switch site {
+	case "Qiita":
+		clientQiita.GetArticleBody(id)
+		resposeData = voice.GetVoiceData(keyword)
+	default:
+		c.Status(http.StatusForbidden)
+		c.Abort()
+		return
+	}
+	c.Data(http.StatusOK, http.DetectContentType(resposeData), resposeData)
 }

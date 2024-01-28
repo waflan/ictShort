@@ -1,6 +1,7 @@
 package articles
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"io"
 	"net/http"
@@ -22,6 +23,9 @@ type XMLQiitaFeed struct {
 		Date   string `xml:"updated"`
 		Author string `xml:"author>name"`
 	} `xml:"entry"`
+}
+type JSONBodyQiita struct {
+	Body string `json:"body"`
 }
 
 func (feed *XMLQiitaFeed) GetArticles() []Article {
@@ -52,4 +56,13 @@ func (a ApiClientQiita) GetListTrendArticles() []Article {
 func (a ApiClientQiita) GetListArticles(keyword string, index int) []Article {
 
 	return nil
+}
+
+func (a ApiClientQiita) GetArticleBody(id string) string {
+	request, _ := http.NewRequest(http.MethodGet, "https://qiita.com/popular-items/feed", nil)
+	response, _ := http.DefaultClient.Do(request)
+	bodyData, _ := io.ReadAll(response.Body)
+	bodyStruct := JSONBodyQiita{}
+	json.Unmarshal(bodyData, bodyStruct)
+	return bodyStruct.Body
 }
