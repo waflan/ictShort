@@ -1,10 +1,12 @@
 package apifuncs
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"x19053/ictshort/articles"
 	"x19053/ictshort/config"
+	"x19053/ictshort/summarize"
 	"x19053/ictshort/voice"
 
 	"github.com/gin-gonic/gin"
@@ -33,7 +35,7 @@ func GetTrendArticleApi(c *gin.Context) {
 func GetArticlesApi(c *gin.Context) {
 	site := c.Query("site")
 	keyword := c.Query("keyword")
-	articleIndex, err := strconv.Atoi(c.Query("index"))
+	pageNum, err := strconv.Atoi(c.Query("page"))
 	if err != nil {
 		c.Status(http.StatusForbidden)
 		c.Abort()
@@ -42,7 +44,7 @@ func GetArticlesApi(c *gin.Context) {
 	articles := []articles.Article{}
 	switch site {
 	case "Qiita":
-		articles = clientQiita.GetListArticles(keyword, articleIndex)
+		articles = clientQiita.GetListArticles(keyword, pageNum)
 	default:
 		c.Status(http.StatusForbidden)
 		c.Abort()
@@ -56,16 +58,45 @@ func GetVoiceApi(c *gin.Context) {
 	keyword := c.Query("keyword")
 	id := c.Query("id")
 
-	resposeData := []byte{}
+	var resposeData []byte
+	var err error
+	contentType := ""
+
+	if keyword != "" {
+		resposeData, err = voice.GetVoiceData(keyword)
+		contentType = http.DetectContentType(resposeData)
+		c.Data(http.StatusOK, contentType, resposeData)
+		return
+	}
 
 	switch site {
 	case "Qiita":
-		clientQiita.GetArticleBody(id)
-		resposeData = voice.GetVoiceData(keyword)
+		var articleBody string
+		var summarizedText string
+		articleBody, err = clientQiita.GetArticleBody(id)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		summarizedText, err = summarize.SummarizeText(articleBody)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		log.Println(summarizedText)
+		resposeData, err = voice.GetVoiceData(summarizedText)
+		contentType = http.DetectContentType(resposeData)
 	default:
 		c.Status(http.StatusForbidden)
 		c.Abort()
 		return
 	}
-	c.Data(http.StatusOK, http.DetectContentType(resposeData), resposeData)
+	if err != nil || resposeData == nil {
+		c.Status(http.StatusBadRequest)
+		c.Abort()
+		return
+	}
+	log.Println(contentType)
+
+	c.Data(http.StatusOK, contentType, resposeData)
 }

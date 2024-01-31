@@ -17,7 +17,7 @@ import (
 
 type ConfigMain struct {
 	AppKeyQiita string `yaml:"qiita_key"`
-	AppKeyTSAPI string `yaml:"text_summarization_key"`
+	AppKeyGPT   string `yaml:"gpt_key"`
 }
 
 func _loadConfig(confObj any, filepath *string) error {

@@ -1,3 +1,6 @@
+:root{
+    --header-height: 2rem;
+}
 *{
     padding: 0;
     margin: 0;
@@ -5,6 +8,77 @@
 }
 body{
     margin: 0;
+    min-height: 100vh;
+}
+@media screen and (max-width: 666px) {
+    :root{
+        font-size: 24px;
+    }
+}
+
+header{
+    box-sizing: border-box;
+    color: #fff;
+    background-color: #4fa5a8;
+    height: var(--header-height);
+    width: 100%;
+    padding: .25rem .5rem;
+    position: absolute;
+    z-index: 1;
+}
+#headerMenu{
+    width: min(auto,100vw);
+    position: fixed;
+    transition: .3s;
+    background:  #72ced1;
+    top: var(--header-height);
+    left: 0;
+}
+#headerMenu>div{
+    padding: .5rem;
+    display: flex;
+    flex-direction: column;
+}
+#headerMenu:not([opened]){
+    transform: translateX(-100%);
+}
+
+#ListenList{
+    display:flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 1rem;
+    box-sizing: border-box;
+    gap: 1rem;
+}
+#ListenList>*{
+    width: 100%;
+}
+#ListenList>button{
+    border: none;
+    font-size: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+.InputField{
+    border: solid 1px #ccc;
+    display: grid;
+    grid-template-columns: 1fr 3rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    height: 2rem;
+}
+.InputField>input{
+    min-width: 1rem;
+    padding-left: 0.5rem;
+}
+.InputField>*{
+    border: none;
+}
+
+main{
+    box-sizing: border-box;
+    padding-top: var(--header-height);
 }
 
 #Player{
@@ -13,4 +87,7 @@ body{
     position: absolute;
     top: 0;
     left: 0;
+    background-color: #0004;
+    box-sizing: border-box;
+    padding-top: var(--header-height);
 }

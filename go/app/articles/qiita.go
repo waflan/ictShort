@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +24,15 @@ type XMLQiitaFeed struct {
 		Date   string `xml:"updated"`
 		Author string `xml:"author>name"`
 	} `xml:"entry"`
+}
+type JSONArticleQiita struct {
+	Title string `json:"title"`
+	Id    string `json:"id"`
+	Url   string `json:"url"`
+	Date  string `json:"updated_at"`
+	User  struct {
+		Id string `json:"id"`
+	} `json:"user"`
 }
 type JSONBodyQiita struct {
 	Body string `json:"body"`
@@ -47,22 +57,53 @@ func (feed *XMLQiitaFeed) GetArticles() []Article {
 // トレンド取得のAPIがない代わりにトレンド記事のxmlを返す機能があったのでそれを使う
 func (a ApiClientQiita) GetListTrendArticles() []Article {
 	request, _ := http.NewRequest(http.MethodGet, "https://qiita.com/popular-items/feed", nil)
-	response, _ := http.DefaultClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return nil
+	}
+	defer response.Body.Close()
 	bodyData, _ := io.ReadAll(response.Body)
 	xmlData := new(XMLQiitaFeed)
 	xml.Unmarshal(bodyData, xmlData)
 	return xmlData.GetArticles()
 }
-func (a ApiClientQiita) GetListArticles(keyword string, index int) []Article {
+func (a ApiClientQiita) GetListArticles(keyword string, pageNum int) []Article {
+	request, _ := http.NewRequest(http.MethodGet, "https://qiita.com/api/v2/items?per_page=100&query="+url.QueryEscape(keyword)+"&page="+strconv.Itoa(pageNum), nil)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return nil
+	}
+	defer response.Body.Close()
+	bodyData, _ := io.ReadAll(response.Body)
+	bodyArray := new([]JSONArticleQiita)
+	json.Unmarshal(bodyData, bodyArray)
 
-	return nil
+	var result []Article
+	for _, q := range *bodyArray {
+		result = append(result, *q.ConvertToArticle())
+	}
+	return result
 }
 
-func (a ApiClientQiita) GetArticleBody(id string) string {
-	request, _ := http.NewRequest(http.MethodGet, "https://qiita.com/popular-items/feed", nil)
-	response, _ := http.DefaultClient.Do(request)
+func (a ApiClientQiita) GetArticleBody(id string) (string, error) {
+	request, _ := http.NewRequest(http.MethodGet, "https://qiita.com/api/v2/items/"+url.QueryEscape(id), nil)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return "", nil
+	}
+	defer response.Body.Close()
 	bodyData, _ := io.ReadAll(response.Body)
-	bodyStruct := JSONBodyQiita{}
+	bodyStruct := new(JSONBodyQiita)
 	json.Unmarshal(bodyData, bodyStruct)
-	return bodyStruct.Body
+	return bodyStruct.Body, nil
+}
+
+func (j *JSONArticleQiita) ConvertToArticle() *Article {
+	return &Article{
+		Title:  j.Title,
+		Id:     j.Id,
+		Url:    j.Url,
+		Date:   j.Date,
+		Author: j.User.Id,
+	}
 }

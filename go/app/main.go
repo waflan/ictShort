@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"x19053/ictshort/apifuncs"
+	"x19053/ictshort/summarize"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,7 @@ func main() {
 	router.LoadHTMLGlob("html/templates/*")
 
 	router.Static("/css", "html/css")
+	router.Static("/contents", "html/contents")
 
 	router.GET("/", rootHandler)
 
@@ -29,6 +31,7 @@ func main() {
 		apiGroup.GET("/listtrend", apifuncs.GetTrendArticleApi)
 		apiGroup.GET("/list", apifuncs.GetArticlesApi)
 		apiGroup.GET("/voice", apifuncs.GetVoiceApi)
+		apiGroup.GET("/summurize", test)
 	}
 
 	http.ListenAndServe(":80", router)
@@ -37,4 +40,14 @@ func main() {
 
 func rootHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", gin.H{})
+}
+
+func test(c *gin.Context) {
+	text := c.Query("text")
+	context, err := summarize.SummarizeText(text)
+	if err != nil {
+		c.Abort()
+		c.Status(http.StatusBadRequest)
+	}
+	c.String(http.StatusOK, context)
 }

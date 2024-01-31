@@ -4,62 +4,237 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>情報技術ショート</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <header>
-        へっだ
+        <div class="headerMenuBtn">
+            <i class="fas fa-bars"></i>
+        </div>
+        <div id="headerMenu">
+            <div>
+                <i class="fas fa-chevron-left headerMenuBtn"></i>
+                <a href="/posts">ブログ</a>
+            </div>
+        </div>
     </header>
     <main>
         <div id="ListenList">
-            <button onclick="playCategory()">トレンド</button>
+            <button onclick="playTrend(`Qiita`)">トレンド</button>
+            <div class="InputField">
+                <input id="KeywordInput" type="text" placeholder="検索キーワード"><button id="KeywordSubmit" onclick="searchButtonFunc(`Qiita`)"><i class="fas fa-search"></i></button>
+            </div>
         </div>
         <div id="Player" style="display: none;">
-            <audio id="AudioPlayer" src=""></audio>
+            <!-- <i class="fas fa-spinner"></i> -->
+            <p style="background-color: aqua;">hogehoge</p>
+            <!-- <button onclick="play()">PlayButton</button> -->
+            <div id="AudioContainer">
+                
+            </div>
+            
         </div>
         
     </main>
 
     <script>
-        async function playCategory(keyword) {
-            document.getElementById("Player").style.display="";
-            let url  = new URL("/api/voice")
-            url.searchParams.set("site","Qiita")
-            url.searchParams.set("index","0")
-            url.searchParams.set("category","trend")
-            let blob = await fetchData(url.href,"GET")
-            
-            document.getElementById("AudioPlayer").src = URL.createObjectURL(blob);
 
+        let Player = document.getElementById("Player");
+        let AudioContainer = document.getElementById("AudioContainer");
+        let PlayList={
+            site:"",
+            trend:"",
+            keyword:"",
+            currentIndex:0,
+            pageNum:1,
+            array:[],
+        };
+        Player.addEventListener("click",(e)=>{
+            if(e.target==Player){
+                document.getElementById("Player").style.display="none";
+            }
+        });
+        buttonOpenFunc("headerMenu","headerMenuBtn");
+
+        document.getElementById("KeywordInput").addEventListener("keydown",(e)=>{
+            if(e.key=="Enter"){
+                document.getElementById("KeywordSubmit").dispatchEvent(new PointerEvent("click"));
+                e.preventDefault();
+            }
+        });
+
+
+        function searchButtonFunc(site) {
+            playKeyword(site,document.getElementById("KeywordInput").value);
         }
-        function fetchApi(apiPath,method,formData,onDoneFunc) {
-            fetch(apiPath,{
-                method: method,
-                body: formData
-            }).then((res)=>res.body.getReader())
-            .then((reader)=>{
-                let decoder = new TextDecoder();
-                let searchJsonText ='';
-                function readChunk({done,value}){
-                    if(done){
-                        let jsonObj = JSON.parse(searchJsonText);
-                        onDoneFunc(jsonObj);
+
+        // トレンド記事を再生する関数
+        async function playTrend(site) {
+            if(!["Qiita"].includes(site)){
+                return;
+            }
+            Player.style.display="";
+
+            if(!(PlayList.site==site&&PlayList.trend)){
+                PlayList.site = site;
+                PlayList.trend = true;
+                PlayList.keyword = null;
+                PlayList.currentIndex = 0;
+                PlayList.array = await fetchApiAsync("/api/listtrend?site="+site,"GET");
+                console.log(PlayList.array);
+            }
+            
+            play();
+        }
+
+        // キーワードを元に記事を再生する関数
+        async function playKeyword(site,keyword) {
+            if(!["Qiita"].includes(site)){
+                return;
+            }
+            Player.style.display="";
+            let fetchFlag = false;
+            if(PlayList.site!=site ||PlayList.trend||PlayList.keyword!=keyword){
+                PlayList.site = site;
+                PlayList.trend = false;
+                PlayList.keyword = keyword;
+                PlayList.currentIndex = 0;
+                PlayList.pageNum = 1;
+                fetchFlag = true;
+                
+            }else if((PlayList.array.length)%100==0&&PlayList.array.length<=PlayList.currentIndex+1){
+                PlayList.pageNum = PlayList.array.length/100+1;
+                PlayList.currentIndex = PlayList.array.length;
+                fetchFlag = true;
+            }
+
+            if(fetchFlag){
+                let url  = new URL(window.location.href+"api/list");
+                url.searchParams.set("site","Qiita");
+                url.searchParams.set("keyword",keyword);
+                url.searchParams.set("page",PlayList.pageNum);
+                let responseData = await fetchApiAsync(url.href,"GET");
+                if(!Array.isArray(responseData)){
+                    PlayList.currentIndex = 0;
+                    play();
+                    return;
+                }
+                PlayList.array = PlayList.array.concat(responseData);
+                console.log(PlayList.array);
+            }
+
+            play();
+        }
+
+
+        async function play() {
+            if(PlayList.array.length!=0){
+                if (PlayList.array.length<=PlayList.currentIndex){
+                    if(PlayList.trend){
                         return;
                     }
-                    searchJsonText+=decoder.decode(value);
-                    reader.read().then(readChunk);
+                    playKeyword(PlayList.site,PlayList.keyword);
+                    return;
                 }
-                reader.read().then(readChunk);
-            });
+                if("audioElement" in PlayList.array[PlayList.currentIndex]){
+                    PlayList.array[PlayList.currentIndex].audioElement.play();
+                }else{
+                    let url  = new URL(window.location.href+"api/voice");
+                    url.searchParams.set("site","Qiita");
+                    url.searchParams.set("id",PlayList.array[PlayList.currentIndex].id);
+                    console.log(url.href);
+
+                    let card = createArticleCard(PlayList.array[PlayList.currentIndex]);
+                    AudioContainer.appendChild(card);
+
+                    let blob = await fetchData(url.href,"GET");
+                    // let blob = await fetchData("/contents/voice.wav","GET");
+                    let audioElement = new Audio(URL.createObjectURL(blob));
+                    audioElement.controls = true;
+                    audioElement.autoplay = true;
+                    audioElement.addEventListener("ended",(e)=>{
+                        PlayList.currentIndex++;
+                        play();
+                    });
+                    card.appendChild(audioElement);
+                    PlayList.array[PlayList.currentIndex].audioElement = audioElement;
+
+                }
+            }
         }
-        async function fetchData(apiPath,method,formData) {
-            let buffer = fetch(apiPath,{
+
+        function createArticleCard(ArticleData) {
+            let card = document.createElement("article");
+            card.classList.add("ArticleCard");
+
+            let titleElement = document.createElement("h2");
+            titleElement.innerHTML=ArticleData.title;
+            card.appendChild(titleElement);
+
+            let authorElement = document.createElement("p");
+            authorElement.innerHTML = `作成者:<a href="https://qiita.com/${ArticleData.author}" target="_blank" rel="noopener noreferrer">@${ArticleData.author}</a>`;
+            card.appendChild(authorElement);
+
+            let urlElement = document.createElement("p");
+            urlElement.innerHTML = `記事URL:<a href="${ArticleData.url}" target="_blank" rel="noopener noreferrer">@${ArticleData.url}</a>`;
+            card.appendChild(urlElement);
+            
+            return card;
+        }
+
+        async function fetchApiAsync(apiPath,method,formData,onDoneFunc) {
+            let result;
+            let reader = await fetch(apiPath,{
                 method: method,
                 body: formData
-            }).then((res)=>res.arrayBuffer())
-
-            return new Blob([buffer])
+            }).then((res)=>res.body.getReader());
+            let decoder = new TextDecoder();
+            let resultText ='';
+            async function readChunk({done,value}){
+                if(done){
+                    let jsonObj = JSON.parse(resultText);
+                    if(onDoneFunc==null){
+                        result = jsonObj;
+                    }else{
+                        result = await onDoneFunc(jsonObj);
+                    }
+                    return;
+                }
+                resultText+=decoder.decode(value);
+                await reader.read().then(readChunk);
+            }
+            await reader.read().then(readChunk);
+            return result;
         }
+
+    async function fetchData(apiPath,method,formData) {
+        let buffer = await fetch(apiPath,{
+            method: method,
+            body: formData
+        }).then((res)=>res.arrayBuffer());
+        return new Blob([buffer]);
+    }
+
+    function buttonOpenFunc(openTargetId,openButtonsClass) {
+        let openTarget = document.getElementById(openTargetId);
+        let openButtons = document.getElementsByClassName(openButtonsClass);
+        Array.from(openButtons).forEach(button => {
+            button.addEventListener('click',()=>{
+                if(openTarget.hasAttribute("opened")){
+                    openTarget.removeAttribute("opened");
+                }else{
+                    openTarget.setAttribute("opened",'');
+                }
+            });
+        });
+        document.addEventListener('click',(e)=>{
+            if(!e.target.closest('#'+openTargetId)&&!e.target.closest('.'+openButtonsClass)){
+                openTarget.removeAttribute("opened");
+            }
+        })
+    }
+    
     </script>
 </body>
 </html>
