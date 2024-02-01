@@ -7,6 +7,10 @@ type Article struct {
 	Date   string `json:"date"`
 	Author string `json:"author"`
 }
+type ArticleContext struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
 
 type ApiClient interface {
 	GetListTrendArticles() []Article

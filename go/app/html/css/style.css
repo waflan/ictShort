@@ -4,7 +4,7 @@
 *{
     padding: 0;
     margin: 0;
-    word-break: keep-all;
+    word-break: break-word;
 }
 body{
     margin: 0;
@@ -13,6 +13,9 @@ body{
 @media screen and (max-width: 666px) {
     :root{
         font-size: 24px;
+    }
+    .ArticleCard,#headerMenu>div>div{
+        font-size: .75rem;
     }
 }
 
@@ -27,7 +30,7 @@ header{
     z-index: 1;
 }
 #headerMenu{
-    width: min(auto,100vw);
+    width: 100vw;
     position: fixed;
     transition: .3s;
     background:  #72ced1;
@@ -35,12 +38,46 @@ header{
     left: 0;
 }
 #headerMenu>div{
-    padding: .5rem;
+    padding: .5rem .5rem 2rem;
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+}
+#headerMenu>div>div{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 60vh;
+    overflow-y: scroll;
 }
 #headerMenu:not([opened]){
     transform: translateX(-100%);
+}
+#headerMenu table{
+    background-color: #fff;
+    color: #000;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+#DictionaryTable th{
+    background-color: #e4f5f5;
+}
+#DictionaryTable td:last-child{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 2em;
+}
+#DictionaryTable input,#DictionaryTable select, #DictionaryTable>tfoot button{
+    border: none;
+    width: 100%;
+    height: 2em;
+    display: block;
+    padding-left: 0.5em;
+    box-sizing: border-box;
+    font-size: 1em;
+}
+#headerMenu table th,#headerMenu table td{
+    border: solid 1px  #4fa5a8;
 }
 
 #ListenList{
@@ -51,13 +88,19 @@ header{
     box-sizing: border-box;
     gap: 1rem;
 }
-#ListenList>*{
+#ListenList>*,#ListenCategory>button{
     width: 100%;
 }
-#ListenList>button{
+#ListenList>button,#ListenCategory>button{
     border: none;
     font-size: 1.5rem;
     border-radius: 0.5rem;
+    height: 2rem;
+}
+#ListenCategory{
+    display:flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .InputField{
@@ -83,11 +126,38 @@ main{
 
 #Player{
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     position: absolute;
     top: 0;
     left: 0;
     background-color: #0004;
     box-sizing: border-box;
     padding-top: var(--header-height);
+}
+
+#AudioContainer{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+}
+.ArticleCard {
+    background-color: #fff;
+    padding: 1rem;
+    border-radius: 1rem;
+}
+.Loading{
+    animation: rotate_anime 2s steps(8, jump-none) infinite;
+}
+.AudioBox[loaded]>.Loading{
+    display: none;
+}
+
+@keyframes rotate_anime {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
 }

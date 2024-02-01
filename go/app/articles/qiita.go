@@ -34,8 +34,9 @@ type JSONArticleQiita struct {
 		Id string `json:"id"`
 	} `json:"user"`
 }
-type JSONBodyQiita struct {
-	Body string `json:"body"`
+type JSONContextQiita struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
 
 func (feed *XMLQiitaFeed) GetArticles() []Article {
@@ -85,17 +86,17 @@ func (a ApiClientQiita) GetListArticles(keyword string, pageNum int) []Article {
 	return result
 }
 
-func (a ApiClientQiita) GetArticleBody(id string) (string, error) {
+func (a ApiClientQiita) GetArticleContext(id string) (*ArticleContext, error) {
 	request, _ := http.NewRequest(http.MethodGet, "https://qiita.com/api/v2/items/"+url.QueryEscape(id), nil)
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return "", nil
+		return nil, nil
 	}
 	defer response.Body.Close()
 	bodyData, _ := io.ReadAll(response.Body)
-	bodyStruct := new(JSONBodyQiita)
-	json.Unmarshal(bodyData, bodyStruct)
-	return bodyStruct.Body, nil
+	contextStruct := new(JSONContextQiita)
+	json.Unmarshal(bodyData, contextStruct)
+	return &ArticleContext{Title: contextStruct.Title, Body: contextStruct.Body}, nil
 }
 
 func (j *JSONArticleQiita) ConvertToArticle() *Article {

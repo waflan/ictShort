@@ -15,7 +15,34 @@
         <div id="headerMenu">
             <div>
                 <i class="fas fa-chevron-left headerMenuBtn"></i>
-                <a href="/posts">ブログ</a>
+                <!-- ここに設定をおく -->
+                <div>
+                    <table id="DictionaryTable">
+                        <thead>
+                            <tr>
+                                <th>単語</th>
+                                <th>読み(カナ)</th>
+                                <th style="width: 10%;">アクセント</th>
+                                <th style="width: 10%;min-width: 6em;">種類</th>
+                                <th style="width: 4em;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- <tr>
+                                <td>hoge</td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr> -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th scope="row" colspan="5"><button onclick="addRowInDictionaryTable()"><i class="fas fa-plus"></i></button></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
             </div>
         </div>
     </header>
@@ -25,15 +52,12 @@
             <div class="InputField">
                 <input id="KeywordInput" type="text" placeholder="検索キーワード"><button id="KeywordSubmit" onclick="searchButtonFunc(`Qiita`)"><i class="fas fa-search"></i></button>
             </div>
+            <div id="ListenCategory">
+                <button></button>
+            </div>
         </div>
         <div id="Player" style="display: none;">
-            <!-- <i class="fas fa-spinner"></i> -->
-            <p style="background-color: aqua;">hogehoge</p>
-            <!-- <button onclick="play()">PlayButton</button> -->
-            <div id="AudioContainer">
-                
-            </div>
-            
+            <div id="AudioContainer"></div>
         </div>
         
     </main>
@@ -42,6 +66,18 @@
 
         let Player = document.getElementById("Player");
         let AudioContainer = document.getElementById("AudioContainer");
+        let DictionaryTable = document.getElementById("DictionaryTable");
+        let DictionaryRowElement = document.createElement("tr");
+        DictionaryRowElement.innerHTML = (`<td><input type="text"></td>`).repeat(2)
+        +`<td><input type="number"></td><td><select>
+            <option value="">指定なし</option>
+            <option value="PROPER_NOUN">固有名詞</option>
+            <option value="COMMON_NOUN">普通名詞</option>
+            <option value="VERB">動詞</option>
+            <option value="ADJECTIVE">形容詞</option>
+            <option value="SUFFIX">語尾</option>
+        </select></td><td><button><i class="fas fa-check"></i></button><button><i class="fas fa-times"></i></button></td>`;
+        let Dictionary = new Map();
         let PlayList={
             site:"",
             trend:"",
@@ -50,8 +86,9 @@
             pageNum:1,
             array:[],
         };
+        
         Player.addEventListener("click",(e)=>{
-            if(e.target==Player){
+            if(e.target==Player||e.target==AudioContainer){
                 document.getElementById("Player").style.display="none";
             }
         });
@@ -64,7 +101,69 @@
             }
         });
 
+        fetchJsonAsync(window.location.href+"api/dict","GET",null,(jsonObj)=>{
+            Object.keys(jsonObj).forEach((key)=>{
+                let value = jsonObj[key];
+                Dictionary[key] = value;
+                let rowElement = addRowInDictionaryTable();
+                console.log(value);
+                rowElement.childNodes[0].firstChild.value = value.surface;
+                rowElement.childNodes[1].firstChild.value = value.pronunciation;
+                rowElement.childNodes[2].firstChild.value = value.accent_type;
+                if(value.word_type!=""){
+                    rowElement.childNodes[3].firstChild.value = value.word_type;
+                }
+                rowElement.setAttribute("word",key);
 
+                
+            });
+        });
+        (async()=>{
+            if(window.localStorage["dictionary"]){
+                await fetch(window.location.href+"api/dict/import",{method:"POST",body:window.localStorage["dictionary"]});
+            }
+            cachingDictionary();
+        })()
+
+
+        async function cachingDictionary() {
+            let buffer = await fetchData(window.location.href+"api/dict?all=true","GET")
+            let text = await new Blob([buffer]).text();
+            window.localStorage["dictionary"]=text;
+
+        }
+
+
+        // 辞書に空の行を追加する関数
+        function addRowInDictionaryTable() {
+            let rowElement = DictionaryRowElement.cloneNode(true);
+            DictionaryTable.getElementsByTagName("tbody")[0].appendChild(rowElement);
+            rowElement.childNodes[4].firstChild.addEventListener("click",async()=>{
+                let rawJson = JSON.stringify({
+                    surface:rowElement.childNodes[0].firstChild.value,
+                    pronunciation:rowElement.childNodes[1].firstChild.value,
+                    accent_type:rowElement.childNodes[2].firstChild.value,
+                    word_type:rowElement.childNodes[3].firstChild.value,
+                });
+                let buffer = await fetchData(window.location.href+"api/dict"+(rowElement.hasAttribute("word")?"?id="+rowElement.getAttribute("word"):""),"POST",rawJson);
+                if(!rowElement.hasAttribute("word")){
+                    let text = await new Blob([buffer]).text();
+                    rowElement.setAttribute("word",text);
+                }
+                cachingDictionary();
+            });
+            rowElement.childNodes[4].lastChild.addEventListener("click",async()=>{
+                if(rowElement.hasAttribute("word")){
+                    await fetchData(window.location.href+"api/dict?id="+rowElement.getAttribute("word"),"DELETE");
+                    cachingDictionary();
+                    rowElement.remove();
+                }
+                
+            });
+            return rowElement;
+        }
+
+        // 検索ボタンの関数
         function searchButtonFunc(site) {
             playKeyword(site,document.getElementById("KeywordInput").value);
         }
@@ -81,7 +180,7 @@
                 PlayList.trend = true;
                 PlayList.keyword = null;
                 PlayList.currentIndex = 0;
-                PlayList.array = await fetchApiAsync("/api/listtrend?site="+site,"GET");
+                PlayList.array = await fetchJsonAsync("/api/listtrend?site="+site,"GET");
                 console.log(PlayList.array);
             }
             
@@ -114,7 +213,7 @@
                 url.searchParams.set("site","Qiita");
                 url.searchParams.set("keyword",keyword);
                 url.searchParams.set("page",PlayList.pageNum);
-                let responseData = await fetchApiAsync(url.href,"GET");
+                let responseData = await fetchJsonAsync(url.href,"GET");
                 if(!Array.isArray(responseData)){
                     PlayList.currentIndex = 0;
                     play();
@@ -128,6 +227,7 @@
         }
 
 
+        // 取得したプレイリストを基に記事を読み上げる
         async function play() {
             if(PlayList.array.length!=0){
                 if (PlayList.array.length<=PlayList.currentIndex){
@@ -137,33 +237,67 @@
                     playKeyword(PlayList.site,PlayList.keyword);
                     return;
                 }
-                if("audioElement" in PlayList.array[PlayList.currentIndex]){
-                    PlayList.array[PlayList.currentIndex].audioElement.play();
-                }else{
-                    let url  = new URL(window.location.href+"api/voice");
-                    url.searchParams.set("site","Qiita");
-                    url.searchParams.set("id",PlayList.array[PlayList.currentIndex].id);
-                    console.log(url.href);
-
-                    let card = createArticleCard(PlayList.array[PlayList.currentIndex]);
-                    AudioContainer.appendChild(card);
-
-                    let blob = await fetchData(url.href,"GET");
-                    // let blob = await fetchData("/contents/voice.wav","GET");
-                    let audioElement = new Audio(URL.createObjectURL(blob));
-                    audioElement.controls = true;
-                    audioElement.autoplay = true;
-                    audioElement.addEventListener("ended",(e)=>{
-                        PlayList.currentIndex++;
-                        play();
-                    });
-                    card.appendChild(audioElement);
-                    PlayList.array[PlayList.currentIndex].audioElement = audioElement;
-
+                if("audioElement" in PlayList.array[PlayList.currentIndex] && "titleAudioElement" in PlayList.array[PlayList.currentIndex]){
+                    if(PlayList.array[PlayList.currentIndex].audioElement.paused&&PlayList.array[PlayList.currentIndex].titleAudioElement.paused){
+                        PlayList.array[PlayList.currentIndex].titleAudioElement.currentTime = 0;
+                        PlayList.array[PlayList.currentIndex].titleAudioElement.play();
+                    }
+                    
+                    return;
                 }
+                if("loaded" in PlayList.array[PlayList.currentIndex]){
+                    if(!PlayList.array[PlayList.currentIndex].loaded){
+                        return;
+                    }else{
+                        console.warn("AudioElements is deleted.");
+                        console.warn(PlayList.array[PlayList.currentIndex]);
+                    }
+                }
+                let url  = new URL(window.location.href+"api/voice");
+                url.searchParams.set("site","Qiita");
+                url.searchParams.set("id",PlayList.array[PlayList.currentIndex].id);
+                console.log(url.href);
+
+                // 記事情報のカードを作成
+                let cardData = createArticleCard(PlayList.array[PlayList.currentIndex]);
+                AudioContainer.appendChild(cardData.parent);
+
+                PlayList.array[PlayList.currentIndex].loaded = false;
+
+                // 要約文と読み上げデータを取得
+                let MultipartData = await fetchMultipartData(url.href,"GET");
+
+                // 取得したデータから残りの情報をカードに追加
+
+                cardData.context.innerHTML = await MultipartData.get("summarizedText").text();
+                let titleAudioElement = new Audio(URL.createObjectURL(MultipartData.get("titleVoiceData")));
+                let audioElement = new Audio(URL.createObjectURL(MultipartData.get("voiceData")));
+                cardData.titleAudio.appendChild(titleAudioElement);
+                cardData.audio.appendChild(audioElement);
+                cardData.titleAudio.setAttribute("loaded",'');
+                cardData.audio.setAttribute("loaded",'');
+
+                titleAudioElement.controls = true;
+                titleAudioElement.autoplay = true;
+                titleAudioElement.addEventListener("ended",(e)=>{
+                    audioElement.currentTime=0;
+                    audioElement.play();
+                });
+                audioElement.controls = true;
+                let tmpIndex = PlayList.currentIndex;
+                audioElement.addEventListener("ended",(e)=>{
+                    PlayList.currentIndex=tmpIndex+1;
+                    play();
+                });
+                PlayList.array[PlayList.currentIndex].titleAudioElement = titleAudioElement;
+                PlayList.array[PlayList.currentIndex].audioElement = audioElement;
+                PlayList.array[PlayList.currentIndex].loaded = true;
+
+                
             }
         }
 
+        // 記事カードの作成関数
         function createArticleCard(ArticleData) {
             let card = document.createElement("article");
             card.classList.add("ArticleCard");
@@ -177,13 +311,23 @@
             card.appendChild(authorElement);
 
             let urlElement = document.createElement("p");
-            urlElement.innerHTML = `記事URL:<a href="${ArticleData.url}" target="_blank" rel="noopener noreferrer">@${ArticleData.url}</a>`;
+            urlElement.innerHTML = `<a href="${ArticleData.url}" target="_blank" rel="noopener noreferrer">記事リンク🔗</a>`;
             card.appendChild(urlElement);
-            
-            return card;
+
+            let contextElement = document.createElement("div");
+            card.appendChild(contextElement);
+            let titleAudioBox = document.createElement("div");
+            titleAudioBox.innerHTML = `<span>タイトル</span><i class="fas fa-spinner Loading"></i>`;
+            titleAudioBox.classList.add("AudioBox");
+            card.appendChild(titleAudioBox);
+            let audioBox = document.createElement("div");
+            audioBox.innerHTML = `<span>要約文</span><i class="fas fa-spinner Loading"></i>`;
+            audioBox.classList.add("AudioBox");
+            card.appendChild(audioBox);
+            return {parent: card, context: contextElement,titleAudio:titleAudioBox,audio:audioBox};
         }
 
-        async function fetchApiAsync(apiPath,method,formData,onDoneFunc) {
+        async function fetchJsonAsync(apiPath,method,formData,onDoneFunc) {
             let result;
             let reader = await fetch(apiPath,{
                 method: method,
@@ -208,14 +352,22 @@
             return result;
         }
 
-    async function fetchData(apiPath,method,formData) {
-        let buffer = await fetch(apiPath,{
+        async function fetchData(apiPath,method,formData,onDoneFunc) {
+            return await fetch(apiPath,{
+                method: method,
+                body: formData
+            }).then((res)=>res.arrayBuffer());
+        }
+
+    // マルチパートレスポンスを受け取る関数
+    async function fetchMultipartData(apiPath,method,formData) {
+        return await fetch(apiPath,{
             method: method,
             body: formData
-        }).then((res)=>res.arrayBuffer());
-        return new Blob([buffer]);
+        }).then((res)=>res.formData());
     }
 
+    // メニューを開くための機能をつける関数
     function buttonOpenFunc(openTargetId,openButtonsClass) {
         let openTarget = document.getElementById(openTargetId);
         let openButtons = document.getElementsByClassName(openButtonsClass);
