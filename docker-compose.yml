@@ -14,7 +14,7 @@ services:
     image: voicevox/voicevox_engine
     environment:
       - ALLOW_ORIGIN=ictshort_voicevox_engine
-    # restart: always
+    restart: always
     ports:
       - 50021:50021
     networks:

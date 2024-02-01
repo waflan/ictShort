@@ -88,28 +88,37 @@ header{
     box-sizing: border-box;
     gap: 1rem;
 }
-#ListenList>*,#ListenCategory>button{
+#ListenList>*{
     width: 100%;
 }
-#ListenList>button,#ListenCategory>button{
+#ListenList>button,#ListenCategory button{
     border: none;
     font-size: 1.5rem;
-    border-radius: 0.5rem;
+    border-radius: .5rem;
     height: 2rem;
+}
+#ListenCategory button:first-child{
+    border-radius: .5rem 0 0 .5rem;
+}
+#ListenCategory button:last-child{
+    border-radius: 0 .5rem .5rem 0;
+    background-color: #ddd;
 }
 #ListenCategory{
     display:flex;
     flex-direction: column;
     gap: 1rem;
 }
-
-.InputField{
-    border: solid 1px #ccc;
+.InputField,#ListenCategory>div{
     display: grid;
     grid-template-columns: 1fr 3rem;
     border-radius: 0.5rem;
     overflow: hidden;
     height: 2rem;
+}
+
+.InputField{
+    border: solid 1px #ccc;
 }
 .InputField>input{
     min-width: 1rem;
@@ -155,9 +164,9 @@ main{
 
 @keyframes rotate_anime {
     0% {
-      transform: rotate(0deg);
+        transform: rotate(0deg);
     }
     100% {
-      transform: rotate(360deg);
+        transform: rotate(360deg);
     }
 }

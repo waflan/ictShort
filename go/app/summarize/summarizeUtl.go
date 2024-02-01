@@ -55,7 +55,7 @@ func init() {
 	reqHeader.Set("Content-Type", "application/json")
 	reqHeader.Set("Authorization", "Bearer "+config.MainConfig.AppKeyGPT)
 	summarizePrompts = []*Message{
-		{Role: "system", Content: "Summarize the following article in Japanese in about 5 lines:"},
+		{Role: "system", Content: "Summarize the following article in about 250 characters in Japanese:"},
 		{Role: "system", Content: "If it contains English words, convert them to Japanese pronunciation."},
 	}
 }
@@ -107,7 +107,7 @@ func _SummarizeText(text string) (*Response, error) {
 	requestData, err := json.Marshal(Request{
 		Model:     "gpt-3.5-turbo",
 		Messages:  append(summarizePrompts, &Message{Role: "user", Content: text}),
-		MaxTokens: 300,
+		MaxTokens: 500,
 	})
 	if err != nil {
 		return nil, err

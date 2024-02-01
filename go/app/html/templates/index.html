@@ -53,7 +53,13 @@
                 <input id="KeywordInput" type="text" placeholder="検索キーワード"><button id="KeywordSubmit" onclick="searchButtonFunc(`Qiita`)"><i class="fas fa-search"></i></button>
             </div>
             <div id="ListenCategory">
-                <button></button>
+                <!-- <div>
+                    <button></button>
+                    <button><i class="fas fa-times"></i></button>
+                </div> -->
+            </div>
+            <div class="InputField">
+                <input id="CategoryInput" type="text" placeholder="追加するキーワード"><button id="CategorySubmit" onclick="addCategoryButton()"><i class="fas fa-plus"></i></button>
             </div>
         </div>
         <div id="Player" style="display: none;">
@@ -63,9 +69,11 @@
     </main>
 
     <script>
+        // -------------------------------初期化----------------------------------
 
         let Player = document.getElementById("Player");
         let AudioContainer = document.getElementById("AudioContainer");
+        let ListenCategory = document.getElementById("ListenCategory");
         let DictionaryTable = document.getElementById("DictionaryTable");
         let DictionaryRowElement = document.createElement("tr");
         DictionaryRowElement.innerHTML = (`<td><input type="text"></td>`).repeat(2)
@@ -77,7 +85,10 @@
             <option value="ADJECTIVE">形容詞</option>
             <option value="SUFFIX">語尾</option>
         </select></td><td><button><i class="fas fa-check"></i></button><button><i class="fas fa-times"></i></button></td>`;
+        let CategoryBase = document.createElement("div");
+        CategoryBase.innerHTML = `<button></button><button><i class="fas fa-times"></i></button>`
         let Dictionary = new Map();
+        let CategoryArray = new Array();
         let PlayList={
             site:"",
             trend:"",
@@ -100,13 +111,19 @@
                 e.preventDefault();
             }
         });
+        document.getElementById("CategoryInput").addEventListener("keydown",(e)=>{
+            if(e.key=="Enter"){
+                document.getElementById("CategorySubmit").dispatchEvent(new PointerEvent("click"));
+                e.preventDefault();
+            }
+        });
 
         fetchJsonAsync(window.location.href+"api/dict","GET",null,(jsonObj)=>{
             Object.keys(jsonObj).forEach((key)=>{
                 let value = jsonObj[key];
                 Dictionary[key] = value;
                 let rowElement = addRowInDictionaryTable();
-                console.log(value);
+                // console.log(value);
                 rowElement.childNodes[0].firstChild.value = value.surface;
                 rowElement.childNodes[1].firstChild.value = value.pronunciation;
                 rowElement.childNodes[2].firstChild.value = value.accent_type;
@@ -114,8 +131,6 @@
                     rowElement.childNodes[3].firstChild.value = value.word_type;
                 }
                 rowElement.setAttribute("word",key);
-
-                
             });
         });
         (async()=>{
@@ -124,15 +139,58 @@
             }
             cachingDictionary();
         })()
+        if(!window.localStorage["category"]){
+            // カテゴリーのデフォルトデータ
+            window.localStorage["category"]=JSON.stringify(["Ruby","Go","Java","JavaScript","Python","Docker"]);
+        }
+        CategoryArray = JSON.parse(window.localStorage["category"]);
+        Array.from(CategoryArray).forEach((category,index)=>{
+            let categoryParent = createCategory(category);
+            CategoryArray[index] = {keyword:category,element:categoryParent};
+            ListenCategory.appendChild(categoryParent);
+        });
 
 
+        // -------------------------------関数----------------------------------
+        function createCategory(category) {
+            let categoryParent = CategoryBase.cloneNode(true);
+            categoryParent.firstChild.innerHTML = category;
+            categoryParent.firstChild.addEventListener("click",()=>{
+                playKeyword("Qiita",category);
+            });
+            categoryParent.lastChild.addEventListener("click",()=>{
+                CategoryArray.splice(Array.from(CategoryArray).findIndex((e)=>{return e.element==categoryParent}));
+                cachingCategoryArray();
+                categoryParent.remove();
+            });
+            return categoryParent;
+        }
+        function addCategoryButton() {
+            let category=document.getElementById("CategoryInput").value;
+            if(category==""){
+                return;
+            }
+            document.getElementById("CategoryInput").value = "";
+            let categoryElement =createCategory(category);
+            CategoryArray.push({keyword:category,element:categoryElement});
+            ListenCategory.appendChild(categoryElement);
+            cachingCategoryArray();
+        }
+        // カテゴリーデータのキャッシュを保存する関数
+        function cachingCategoryArray() {
+            let tmpArray = new Array()
+            Array.from(CategoryArray).forEach((e)=>{
+                tmpArray.push(e.keyword);
+            });
+            window.localStorage["category"] = JSON.stringify(tmpArray);
+        }
+
+        // ブラウザに辞書データをキャッシュする関数(辞書データがサーバーから消えないよう念のため)
         async function cachingDictionary() {
             let buffer = await fetchData(window.location.href+"api/dict?all=true","GET")
             let text = await new Blob([buffer]).text();
             window.localStorage["dictionary"]=text;
-
         }
-
 
         // 辞書に空の行を追加する関数
         function addRowInDictionaryTable() {
