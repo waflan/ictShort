@@ -21,6 +21,7 @@ func SetDictionaryApi(c *gin.Context) {
 	id := c.Query("id")
 	word := &voice.Word{}
 	body, _ := io.ReadAll(c.Request.Body)
+	// log.Println(string(body))
 	json.Unmarshal(body, word)
 	if _, ok := voice.DictionaryData[id]; ok {
 		if voice.UpdateDictionary(id, word) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>情報技術ショート</title>
+    <title>技術記事ショート</title>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
     <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -12,10 +12,12 @@
         <div class="headerMenuBtn">
             <i class="fas fa-bars"></i>
         </div>
+        <p>技術記事ショート</p>
         <div id="headerMenu">
             <div>
                 <i class="fas fa-chevron-left headerMenuBtn"></i>
                 <!-- ここに設定をおく -->
+                <p>読み上げ単語辞書設定</p>
                 <div>
                     <table id="DictionaryTable">
                         <thead>
@@ -63,6 +65,7 @@
             </div>
         </div>
         <div id="Player" style="display: none;">
+            <button id="PlayerCloseButton">閉じる</button>
             <div id="AudioContainer"></div>
         </div>
         
@@ -103,6 +106,9 @@
                 document.getElementById("Player").style.display="none";
             }
         });
+        document.getElementById("PlayerCloseButton").addEventListener("click",()=>{
+            document.getElementById("Player").style.display="none";
+        });
         buttonOpenFunc("headerMenu","headerMenuBtn");
 
         document.getElementById("KeywordInput").addEventListener("keydown",(e)=>{
@@ -123,7 +129,7 @@
                 let value = jsonObj[key];
                 Dictionary[key] = value;
                 let rowElement = addRowInDictionaryTable();
-                // console.log(value);
+                console.log(value);
                 rowElement.childNodes[0].firstChild.value = value.surface;
                 rowElement.childNodes[1].firstChild.value = value.pronunciation;
                 rowElement.childNodes[2].firstChild.value = value.accent_type;
@@ -200,7 +206,7 @@
                 let rawJson = JSON.stringify({
                     surface:rowElement.childNodes[0].firstChild.value,
                     pronunciation:rowElement.childNodes[1].firstChild.value,
-                    accent_type:rowElement.childNodes[2].firstChild.value,
+                    accent_type:Number(rowElement.childNodes[2].firstChild.value),
                     word_type:rowElement.childNodes[3].firstChild.value,
                 });
                 let buffer = await fetchData(window.location.href+"api/dict"+(rowElement.hasAttribute("word")?"?id="+rowElement.getAttribute("word"):""),"POST",rawJson);

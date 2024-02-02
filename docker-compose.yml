@@ -15,8 +15,8 @@ services:
     environment:
       - ALLOW_ORIGIN=ictshort_voicevox_engine
     restart: always
-    ports:
-      - 50021:50021
+    # ports:
+    #   - 50021:50021
     networks:
       - ictshort_network
 networks:
