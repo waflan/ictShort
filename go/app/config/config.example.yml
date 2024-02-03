@@ -1,2 +1,2 @@
-qiita_key: ""
-gpt_key: ""
+qiita_key: "qiita_secret_key"
+gpt_key: "gpt_secret_key"

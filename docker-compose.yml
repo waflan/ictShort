@@ -6,7 +6,7 @@ services:
     volumes:
       - ./go/app:/app:z
     ports:
-      - 8080:80
+      - ${MainPort}:80
     networks:
       - ictshort_network
   voicevox_engine:
