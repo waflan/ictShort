@@ -4,12 +4,12 @@ Qiitaの記事をchatGPTで要約、voicevox_engineで読み上げするツー�
  - このツールはdocker及びdocker-composeを使い、別途インストールが必要。
  - 基礎ディレクトリ内にある.example.envファイルを参考に.envファイルを作成。
  - ディレクトリgo/app/config以下にある例を参考にconfig.xmlを作成。
- - 以下のコマンドを入力する。
+ - 以下のコマンドを実行する。
 ```
 $ docker network create ictshort_network
 ```
 ## 実行方法
- - 以下のコマンドを入力する。
+ - 以下のコマンドを実行する。
 ```
 $ docker-compose up
 ```
